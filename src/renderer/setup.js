@@ -158,6 +158,17 @@ $("save-model").addEventListener("click", async () => {
     return;
   }
 
+  // Caught in the renderer as well as the main process, so the mistake is
+  // named instantly rather than after a round trip.
+  if (/^(nvapi-|sk-|AIza|gsk_)/i.test(model)) {
+    status.textContent =
+      "That looks like your API key, not a model name. The key goes in the field above; " +
+      "this one wants the model id from the page you generated the key on, for example " +
+      "deepseek-ai/deepseek-v4-pro-0813. Nothing was sent.";
+    status.className = "status err";
+    return;
+  }
+
   $("save-model").disabled = true;
   const stop = startProgress(status, `Checking ${model}`);
   try {

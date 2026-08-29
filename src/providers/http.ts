@@ -27,6 +27,8 @@
  * actual error — never inferred later from a string.
  */
 
+import { redactSecrets } from "./secrets.ts";
+
 export type FailureKind =
   /** The request did not complete within its budget. Says nothing about the key. */
   | "timeout"
@@ -70,10 +72,36 @@ export interface HttpResult {
 const LOG_LIMIT = 60;
 const log: HttpAttempt[] = [];
 
+/**
+ * Redaction happens here, at the single point of entry to the log, rather than
+ * at each call site.
+ *
+ * The `model` field is the one that matters: a key pasted into the model box is
+ * sent as a model id and would otherwise be printed verbatim by every consumer
+ * of this log. The URL and response body are scrubbed too, since a provider is
+ * free to echo whatever it was sent back in an error message.
+ */
 function record(attempt: HttpAttempt): HttpAttempt {
-  log.push(attempt);
+  const safe: HttpAttempt = {
+    ...attempt,
+    url: redactSecrets(attempt.url),
+    ...(attempt.model === undefined ? {} : { model: redactSecrets(attempt.model) }),
+    ...(attempt.bodySnippet === undefined
+      ? {}
+      : { bodySnippet: redactSecrets(attempt.bodySnippet) }),
+    ...(attempt.failure === undefined
+      ? {}
+      : {
+          failure: {
+            ...attempt.failure,
+            name: redactSecrets(attempt.failure.name),
+            message: redactSecrets(attempt.failure.message),
+          },
+        }),
+  };
+  log.push(safe);
   if (log.length > LOG_LIMIT) log.splice(0, log.length - LOG_LIMIT);
-  return attempt;
+  return safe;
 }
 
 /** Most recent requests, newest last. Safe to show the user: no keys are stored. */

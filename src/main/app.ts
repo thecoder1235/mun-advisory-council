@@ -28,8 +28,10 @@ import { listHistory, readAnswer, saveAnswer } from "../council/history.ts";
 import { runCouncil, type CouncilEvent } from "../council/run.ts";
 import { ALL_AGENTS, type AgentName } from "../council/router.ts";
 import {
+  apiKeyInModelFieldMessage,
   checkApiKey,
   formatAttempts,
+  looksLikeApiKey,
   PROVIDERS,
   providerById,
   testConnection,
@@ -312,6 +314,9 @@ function registerIpc(): void {
   ipcMain.handle("models:verify", async (_event, providerId: unknown, model: unknown) => {
     const provider = providerById(String(providerId));
     if (!provider) return { ok: false, message: "Unknown provider." };
+    if (looksLikeApiKey(String(model))) {
+      return { ok: false, message: apiKeyInModelFieldMessage() };
+    }
 
     const resolved = resolveProviderKey(settings, provider.id, provider.keyEnv, codec);
     if (!resolved) return { ok: false, message: "Save an API key first." };
@@ -335,6 +340,11 @@ function registerIpc(): void {
   });
 
   ipcMain.handle("settings:setRoleModel", async (_event, role: unknown, model: unknown) => {
+    // Never write a key into settings.json under a model field, whatever the
+    // renderer sends. The UI checks too, but this is the boundary that counts.
+    if (looksLikeApiKey(String(model))) {
+      return { ok: false, message: apiKeyInModelFieldMessage(), state: settingsState() };
+    }
     settings = setRoleModel(settings, String(role), String(model));
     await saveSettings(userDataDir(), settings);
     // The default model drives warm-up, so a change restarts provisioning.

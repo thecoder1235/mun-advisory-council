@@ -23,6 +23,7 @@ import {
   request,
   type Failure,
 } from "./http.ts";
+import { apiKeyInModelFieldMessage, looksLikeApiKey } from "./secrets.ts";
 import {
   ProviderError,
   type ChatMessage,
@@ -600,6 +601,10 @@ export async function verifyModel(
   const id = model.trim();
   if (id === "") return { ok: false, message: "Enter a model id first." };
 
+  // Caught before the request is built, so the key never reaches the network,
+  // the settings file or the request log.
+  if (looksLikeApiKey(id)) return { ok: false, message: apiKeyInModelFieldMessage() };
+
   const before = recentAttempts().length;
   const result = await request(`${provider.baseUrl}/chat/completions`, {
     method: "POST",
@@ -789,6 +794,7 @@ export async function complete(
 }
 
 export { clearAttempts, formatAttempts, recentAttempts } from "./http.ts";
+export { apiKeyInModelFieldMessage, looksLikeApiKey, redactSecrets } from "./secrets.ts";
 export type { Failure, FailureKind, HttpAttempt } from "./http.ts";
 export type { ChatMessage, CompletionRequest, CompletionResult, ProviderConfig };
 export { ProviderError };

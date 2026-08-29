@@ -77,6 +77,16 @@ async function saveModelFor(role, value, statusEl) {
     return false;
   }
 
+  if (/^(nvapi-|sk-|AIza|gsk_)/i.test(typed)) {
+    setStatus(
+      statusEl,
+      "That looks like your API key, not a model name. Keys go in the API key field " +
+        "at the top of this page. Nothing was sent.",
+      "err",
+    );
+    return false;
+  }
+
   const stop = startProgress(statusEl, `Checking ${typed}`);
   try {
     // Check before saving. A model typed by hand is exactly where a typo or a

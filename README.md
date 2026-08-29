@@ -174,6 +174,13 @@ The renderer can ask the main process to check, save or remove a key. There is
 no IPC path that returns one. A backup copy is kept alongside the settings file,
 so an interrupted write cannot cost you the key.
 
+Setup asks for the key and then the model name, from the same clipboard, so
+pasting the key twice is an easy mistake. A value that looks like a key is
+rejected in the model field before anything is sent — and independently of that,
+anything key-shaped is redacted on its way into the request log, so a key cannot
+be printed by "Show request details" or by the diagnostics in  even if
+the check were bypassed.
+
 ---
 
 ## Architecture

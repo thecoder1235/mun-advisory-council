@@ -35,6 +35,14 @@ simply not being shown one. An agent that is merely not shown a weakness section
 will happily conclude the character has none. One that is told the section is
 missing cannot.
 
+![The devil's advocate refusing the premise of the question. Asked how Superman
+can counter Iron Man's weakness, it reports that the MCU page has no Weaknesses
+section at all, marks every weakness a reader might recall — Kryptonite, magic,
+EMP, hacking — as UNVERIFIED, and states plainly that answering anyway "would be
+fabrication". It also catches that the only "Iron Man" on a Superman-compatible
+DC wiki is an unrelated thief, not Tony
+Stark.](docs/devils-advocate.png)
+
 **Canon is tagged, and conflicts are preserved.** Every claim carries `[COMICS]`,
 `[FILM]` or `[BOTH]`. Where continuities disagree the council reports both
 readings rather than averaging them — the disagreement is usually the most
@@ -44,11 +52,26 @@ can contest.
 **`[UNVERIFIED]` marks what will not survive a challenge.** Inference is allowed;
 passing it off as sourced fact is not.
 
+![The coordinator's headline answer, with a COMICS or FILM chip attached to
+every individual claim and an UNVERIFIED chip on the one inference. Under "Where
+this breaks" it names which agents disagree and why — the canon-keeper says act
+on the armour's structural limits, the vulnerability-mapper and devil's advocate
+say no strategy is defensible until the missing section is retrieved, the
+crisis-forecaster reframes the risk entirely — instead of averaging them into a
+single confident recommendation. The recommendation then lists three courses of
+action, each with its cost stated.](docs/coordinator-headline.png)
+
 **No flattery.** Agents are forbidden from opening with praise, and every answer
 must fill a heading called **Where this breaks** — which may never be empty and
 may never be filled with agreement. Cards in the UI open on that heading rather
 than on the finding, because it is the part a delegate most needs and is least
 likely to seek out.
+
+![Three agent cards side by side, each collapsed to show only its "Where this
+breaks" section rather than its finding, with the seconds that agent took in the
+header. All three independently report the same problem from different angles:
+the weakness the question assumes does not appear in the retrieved source, so
+any plan built on it rests on a gap.](docs/agent-cards.png)
 
 **A grounding audit runs after the answer.** It extracts every proper noun in the
 output and checks it against the fetched text, flagging names that appear in the
@@ -188,6 +211,13 @@ least three agents, `devils-advocate` and `coordinator` always included, unknown
 agent names dropped, and unparseable output treated as `unclear` rather than
 "proceed with nobody". Whatever code had to override is shown to you — the
 router advises, it does not rule — and any agent it skipped can be woken by hand.
+
+![The question box and the router's decision. Below the question, the app states
+up front that a full council takes roughly 8-9 minutes and why. The Council panel
+then lists which agents the router woke and the one-line focus it assigned each
+of them, and offers a button to wake the one agent it chose to skip — so the
+routing is visible and reversible rather than
+hidden.](docs/question-and-router.png)
 
 ### Agent directives are editable markdown
 

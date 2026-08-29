@@ -1,0 +1,25 @@
+# Dependencies and build output
+node_modules/
+dist/
+release/
+
+# Secrets. Never commit a real key; .env.example is the template.
+.env
+
+# Local runtime state, written per user at runtime rather than shipped.
+cache/
+history/
+settings.json
+settings.backup.json
+
+# Diagnostic and test output. These can contain request logs, so they stay
+# local even though the tooling redacts keys.
+*.log
+*.out
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

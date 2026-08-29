@@ -1,0 +1,226 @@
+<!doctype html>
+<!--
+  MUN Advisory Council — grounded multi-agent preparation for Model UN crisis committees.
+  Copyright (C) 2026 MUN Advisory Council contributors
+
+  Licensed under the GNU Affero General Public License v3 or later.
+  See the LICENSE file in the project root for the full text.
+-->
+
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'" />
+<title>Setup — MUN Advisory Council</title>
+<style>
+  :root {
+    --bg: #0d0d10;
+    --panel: #16161c;
+    --border: #2a2a34;
+    --text: #e6e6ea;
+    --muted: #9a9aa6;
+    --accent: #76b900; /* NVIDIA green */
+    --danger: #ff6b6b;
+    --ok: #4ade80;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: grid;
+    place-items: center;
+    padding: 32px;
+  }
+  main { width: 100%; max-width: 620px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+  }
+  ol { margin: 0 0 20px; padding-left: 20px; color: var(--muted); }
+  ol li { margin-bottom: 6px; }
+  ol li strong { color: var(--text); font-weight: 600; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  input {
+    width: 100%;
+    padding: 11px 12px;
+    background: #0f0f14;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font: 14px/1.4 ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  input:focus { outline: none; border-color: var(--accent); }
+  .row { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  button {
+    padding: 11px 18px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #1e1e26;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  button:hover:not(:disabled) { border-color: #3d3d4a; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #0d0d10; font-weight: 600; }
+  button.primary:hover:not(:disabled) { filter: brightness(1.1); }
+  button:disabled { opacity: 0.5; cursor: default; }
+  a { color: var(--accent); cursor: pointer; }
+  .status { margin-top: 16px; font-size: 14px; min-height: 22px; }
+  .status.ok { color: var(--ok); }
+  .status.err { color: var(--danger); }
+  .status.busy { color: var(--muted); }
+  .spinner {
+    display: inline-block; width: 11px; height: 11px; margin-right: 7px;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: -1px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .note {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .note code { color: var(--text); font-size: 12px; }
+
+  ol.walk { color: var(--text); padding-left: 22px; margin: 0 0 20px; }
+  ol.walk li { margin-bottom: 13px; }
+  ol.walk .sub2 { display: block; color: var(--muted); font-size: 13px; margin-top: 3px; }
+  code.model-id {
+    display: inline-block; background: #0f0f14; border: 1px solid var(--border);
+    border-radius: 4px; padding: 2px 7px; margin-top: 4px;
+    font: 13px ui-monospace, "Cascadia Code", Consolas, monospace; color: var(--accent);
+    user-select: all;
+  }
+  .danger-note {
+    display: block; margin-top: 6px; background: #241d10; border: 1px solid #4a3a1e;
+    color: #f0d9a0; border-radius: 6px; padding: 9px 11px; font-size: 13px;
+  }
+
+  .howto-title { font-size: 14px; margin: 0 0 14px; }
+  dl.howto { margin: 0; }
+  dl.howto dt { font-weight: 600; font-size: 14px; margin-top: 14px; }
+  dl.howto dt:first-child { margin-top: 0; }
+  dl.howto dd { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+  .tag {
+    display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .05em;
+    padding: 1px 6px; border-radius: 3px; border: 1px solid; vertical-align: 1px;
+  }
+  .tag.comics { color: #c084fc; border-color: #5b3f7a; background: #241a33; }
+  .tag.film   { color: #38bdf8; border-color: #1e4a63; background: #10222e; }
+  .tag.unver  { color: #0d0d10; border-color: #f5c451; background: #f5c451; }
+  pre#log {
+    margin-top: 12px; padding: 12px; background: #0f0f14; border: 1px solid var(--border);
+    border-radius: 6px; font: 12px/1.5 ui-monospace, "Cascadia Code", Consolas, monospace;
+    color: var(--muted); white-space: pre-wrap; word-break: break-word;
+    max-height: 260px; overflow-y: auto;
+  }
+</style>
+</head>
+<body>
+<main>
+  <div style="display:flex;align-items:baseline;gap:12px">
+    <div style="flex:1">
+      <h1>Set up MUN Advisory Council</h1>
+      <p class="sub">The app needs an API key to run its advisory agents. This is a one-time step.</p>
+    </div>
+    <button id="back-to-app" hidden>&larr; Back</button>
+  </div>
+
+  <div class="panel">
+    <ol class="walk">
+      <li>
+        <strong>Create a free NVIDIA account.</strong>
+        Go to <a id="link-nvidia">build.nvidia.com</a> and sign up.
+        <span class="sub2">It asks for phone verification. This is free and gives you enough credits for many sessions.</span>
+      </li>
+      <li>
+        <strong>Open the page for this exact model:</strong>
+        <code class="model-id">deepseek-ai/deepseek-v4-pro-0813</code>
+        <span class="sub2">Search for it on the site. You need to be on that model's own page for the next step to work.</span>
+      </li>
+      <li>
+        <strong>Click "Get API Key" on that model's page.</strong>
+        <span class="danger-note">
+          It has to be the button on the model page. A key made from your account
+          or profile section will <strong>not</strong> work — NVIDIA issues keys per model,
+          and a key from anywhere else simply cannot call this one. This is the single
+          most common way to lose an hour here.
+        </span>
+      </li>
+      <li><strong>Paste the key below.</strong> It starts with <code>nvapi-</code>.</li>
+      <li>
+        <strong>Enter the model name</strong> when asked, exactly as:
+        <code class="model-id">deepseek-ai/deepseek-v4-pro-0813</code>
+      </li>
+    </ol>
+
+    <label for="key">1. NVIDIA API key</label>
+    <input id="key" type="password" placeholder="nvapi-..." autocomplete="off" spellcheck="false" />
+
+    <div class="row">
+      <button id="check">Test key</button>
+      <button id="save" class="primary" disabled>Save and continue</button>
+      <button id="test-connection">Test connection</button>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <div id="model-step" hidden>
+      <hr style="border:none;border-top:1px solid var(--border);margin:20px 0" />
+      <p style="margin:0 0 4px"><strong>Your key works.</strong></p>
+      <p style="color:var(--muted);font-size:13px;margin:0 0 14px" id="model-why"></p>
+      <label for="model">2. Model name (from the page where you got the key)</label>
+      <input id="model" type="text" placeholder="e.g. deepseek-ai/deepseek-v4-pro-0813" autocomplete="off" spellcheck="false" />
+      <div class="row">
+        <button class="primary" id="save-model">Use this model</button>
+      </div>
+      <div class="status" id="model-status"></div>
+    </div>
+
+    <div class="row" style="margin-top:10px">
+      <button class="link" id="toggle-log" style="background:none;border:none;color:var(--accent);padding:0;cursor:pointer;font:inherit;font-size:13px">Show request details</button>
+    </div>
+    <pre id="log" hidden></pre>
+
+    <div class="note" id="warmnote" style="border:none;padding-top:0;margin-top:8px"></div>
+    <div class="note" id="note"></div>
+  </div>
+
+  <div class="panel" style="margin-top:18px">
+    <h2 class="howto-title">How to use this</h2>
+    <dl class="howto">
+      <dt>Add your own character first, then everyone else at the table.</dt>
+      <dd>The council reasons only from the wiki pages you load. Nobody loaded means nothing to reason from.</dd>
+
+      <dt>A full council takes 3–9 minutes.</dt>
+      <dd>The model has to start a GPU on every question — that alone is about two minutes, every time, even for a
+          question you just asked. This is NVIDIA's provisioning, not the app being slow.</dd>
+
+      <dt>Cards appear as each agent finishes.</dt>
+      <dd>You do not have to wait for all of them. Read the first card while the rest are still working.</dd>
+
+      <dt><span class="tag unver">UNVERIFIED</span> means it is not in the source.</dt>
+      <dd>The model inferred it. It will not survive a challenge in committee — do not build an argument on it.</dd>
+
+      <dt><span class="tag comics">COMICS</span> and <span class="tag film">FILM</span> are separate continuities.</dt>
+      <dd>They frequently contradict each other, and where they do is often the most useful thing on screen: it tells
+          you exactly which claims an opponent can contest.</dd>
+
+      <dt>The highest-value question is "here is my plan, where does it break?"</dt>
+      <dd>The council is built to attack a plan, not to praise one. Give it something to attack.</dd>
+    </dl>
+  </div>
+</main>
+
+<script src="setup.js"></script>
+</body>
+</html>

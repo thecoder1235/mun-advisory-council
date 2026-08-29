@@ -1,0 +1,106 @@
+name: Release
+
+# Builds installers for both platforms when a version tag is pushed.
+#
+# Each OS builds its own artifact natively: electron-builder can only produce a
+# macOS dmg on macOS, so there is no way to cross-compile this from one runner.
+on:
+  # One push: key only — YAML keeps the last duplicate, so splitting tags and
+  # branches across two would silently drop the tag trigger.
+  push:
+    tags:
+      - "v*"
+    branches:
+      - main
+  # Every pull request gets a typecheck and a build on both platforms, so a
+  # change that breaks packaging is caught before merge rather than at release.
+  pull_request:
+  # Buildable on demand too, so the pipeline can be exercised without cutting a
+  # release — the failure mode to avoid is discovering CI is broken at the
+  # moment you actually need a build.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      # One platform failing should not throw away a working artifact from the
+      # other; both results are wanted even when one breaks.
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: windows
+            args: --win
+          - os: macos-latest
+            name: macos
+            args: --mac
+
+    runs-on: ${{ matrix.os }}
+    name: Build ${{ matrix.name }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Package
+        # The app is shipped unsigned. Without this, electron-builder searches
+        # the keychain for an identity and fails the macOS build on a runner
+        # that has none.
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: npx electron-builder ${{ matrix.args }} --publish never
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          # Only the installers, not the unpacked build trees.
+          path: |
+            release/*.exe
+            release/*.dmg
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    # Only publish for a real tag; a manual run just leaves the artifacts.
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true
+          body: |
+            Unsigned builds — both platforms will warn on first launch.
+
+            **Windows:** SmartScreen shows "Windows protected your PC".
+            Click **More info** then **Run anyway**.
+
+            **macOS:** Gatekeeper says the app "is damaged and can't be opened",
+            or "cannot be opened because the developer cannot be verified".
+            Open Terminal and run:
+
+                xattr -cr "/Applications/MUN Advisory Council.app"
+
+            then launch it normally. Take the `arm64` dmg for Apple Silicon
+            (M1 and later) or the `x64` dmg for an Intel Mac.

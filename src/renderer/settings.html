@@ -1,0 +1,149 @@
+<!doctype html>
+<!--
+  MUN Advisory Council — grounded multi-agent preparation for Model UN crisis committees.
+  Copyright (C) 2026 MUN Advisory Council contributors
+
+  Licensed under the GNU Affero General Public License v3 or later.
+  See the LICENSE file in the project root for the full text.
+-->
+
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'" />
+<title>Settings — MUN Advisory Council</title>
+<style>
+  :root {
+    --bg:#0d0d10; --panel:#16161c; --border:#2a2a34; --text:#e6e6ea;
+    --muted:#9a9aa6; --accent:#76b900; --danger:#ff6b6b; --ok:#4ade80;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 32px; overflow-y: auto;
+  }
+  main { max-width: 720px; margin: 0 auto; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 0 0 14px; font-weight: 600; }
+  .sub { color: var(--muted); margin: 0 0 26px; font-size: 14px; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px 22px; margin-bottom: 18px;
+  }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  input, select {
+    width: 100%; padding: 10px 11px; background: #0f0f14;
+    border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+    font: 14px/1.4 system-ui, sans-serif;
+  }
+  input { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+  .row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; align-items: center; }
+  button {
+    padding: 10px 16px; border-radius: 6px; border: 1px solid var(--border);
+    background: #1e1e26; color: var(--text); font: inherit; font-size: 14px; cursor: pointer;
+  }
+  button:hover:not(:disabled) { border-color: #3d3d4a; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #0d0d10; font-weight: 600; }
+  button.link { background: none; border: none; color: var(--accent); padding: 0; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .role { margin-bottom: 20px; }
+  .role:last-child { margin-bottom: 0; }
+  .role .hint { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+  .escape-row { display: flex; gap: 8px; margin-top: 8px; }
+  .escape-row input { flex: 1; }
+  .escape-row button { white-space: nowrap; }
+  .escape-label { font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+  .banner {
+    border: 1px solid #4a3a1e; background: #241d10; color: #f0d9a0;
+    border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; font-size: 14px;
+  }
+  .banner strong { color: #ffe9b8; }
+  .spinner {
+    display: inline-block; width: 11px; height: 11px; margin-right: 7px;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: -1px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .status { margin-top: 14px; font-size: 14px; min-height: 22px; }
+  .status.ok { color: var(--ok); }
+  .status.err { color: var(--danger); }
+  .status.busy { color: var(--muted); }
+  .meta { font-size: 12px; color: var(--muted); margin-top: 12px; }
+  .meta code { color: var(--text); }
+  .pill {
+    display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px;
+    border: 1px solid var(--border); color: var(--muted); margin-left: 8px;
+  }
+  .pill.on { color: var(--ok); border-color: #2c4a34; }
+  pre#log {
+    margin-top: 14px; padding: 12px; background: #0f0f14; border: 1px solid var(--border);
+    border-radius: 6px; font: 12px/1.5 ui-monospace, "Cascadia Code", Consolas, monospace;
+    color: var(--muted); white-space: pre-wrap; word-break: break-word;
+    max-height: 320px; overflow-y: auto;
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Settings</h1>
+      <p class="sub">API key, models, and fallback order.</p>
+    </div>
+    <button class="link" id="back">&larr; Back</button>
+  </header>
+
+  <section class="panel">
+    <h2>NVIDIA API key <span class="pill" id="key-pill">checking...</span></h2>
+    <label for="key">Key (starts with nvapi-)</label>
+    <input id="key" type="password" placeholder="nvapi-..." autocomplete="off" spellcheck="false" />
+    <div class="row">
+      <button class="primary" id="save-key">Save key</button>
+      <button id="clear-key">Remove stored key</button>
+      <button class="link" id="link-nvidia">Get a key at build.nvidia.com</button>
+      <button class="link" id="open-guide">Setup &amp; usage guide</button>
+    </div>
+    <div class="status" id="key-status"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Models</h2>
+    <div id="model-banner" hidden></div>
+    <div id="roles"></div>
+    <div class="row">
+      <button id="refresh">Refresh model list</button>
+      <span class="meta" id="catalog-meta"></span>
+    </div>
+    <div class="status" id="model-status"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Fallback provider</h2>
+    <label for="fallback">Used when NVIDIA is rate-limited or unavailable</label>
+    <select id="fallback"></select>
+    <p class="hint meta" id="fallback-hint"></p>
+  </section>
+
+  <section class="panel">
+    <h2>Diagnostics</h2>
+    <p style="color:var(--muted);font-size:13px;margin:0 0 12px">
+      Checks only whether this machine can reach the provider. It sends no key and picks no model,
+      so it tells a network problem apart from a key or model problem.
+    </p>
+    <div class="row" style="margin-top:0">
+      <button id="test-connection">Test connection</button>
+      <button class="link" id="toggle-log">Show request details</button>
+    </div>
+    <div class="status" id="conn-status"></div>
+    <pre id="log" hidden></pre>
+  </section>
+
+  <p class="meta" id="footer"></p>
+</main>
+<script src="settings.js"></script>
+</body>
+</html>

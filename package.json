@@ -1,0 +1,98 @@
+{
+  "name": "mun-advisory-council",
+  "version": "0.1.0",
+  "description": "A desktop research assistant for Model UN crisis committees that reasons only from fetched wiki sources and refuses to answer from model memory.",
+  "type": "module",
+  "main": "dist/main/main.js",
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "scripts": {
+    "wiki": "node --env-file-if-exists=.env src/cli/fetch-character.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc && node scripts/postbuild.mjs",
+    "start": "npm run build && electron .",
+    "agent": "node --env-file-if-exists=.env src/cli/ask-agent.ts",
+    "doctor": "node --env-file-if-exists=.env src/cli/doctor.ts",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:win": "npm run build && electron-builder --win",
+    "test:durability": "node test/settings-durability.ts",
+    "postbuild": "node scripts/postbuild.mjs",
+    "test": "npm run build && npm run test:durability && npm run test:ui && npm run test:council && npm run test:fresh && npm run test:progress",
+    "test:ui": "electron test/smoke-ui.mjs",
+    "test:council": "electron test/smoke-council.mjs",
+    "test:fresh": "electron test/smoke-freshprofile.mjs",
+    "test:progress": "electron test/smoke-progress.mjs",
+    "tool:diagnose": "npm run build && electron tools/diagnose.mjs",
+    "tool:verify": "npm run build && electron tools/verify-all.mjs",
+    "tool:council": "npm run build && electron tools/council-run.mjs",
+    "tool:agent": "npm run build && electron tools/run-agent.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "electron": "^44.0.0",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.9.2"
+  },
+  "build": {
+    "appId": "com.munadvisory.council",
+    "productName": "MUN Advisory Council",
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "agents",
+        "to": "agents"
+      }
+    ],
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "MUN-Advisory-Council-${version}-win-x64.exe"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.education",
+      "identity": null
+    },
+    "dmg": {
+      "artifactName": "MUN-Advisory-Council-${version}-${arch}.dmg"
+    }
+  },
+  "license": "AGPL-3.0-or-later",
+  "author": "bilgecol48@gmail.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thecoder1235/mun-advisory-council.git"
+  },
+  "homepage": "https://github.com/thecoder1235/mun-advisory-council#readme",
+  "bugs": {
+    "url": "https://github.com/thecoder1235/mun-advisory-council/issues"
+  },
+  "keywords": [
+    "model-un",
+    "mun",
+    "electron",
+    "multi-agent",
+    "llm",
+    "rag",
+    "grounding",
+    "hallucination",
+    "nvidia-nim",
+    "crisis-committee"
+  ]
+}

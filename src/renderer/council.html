@@ -100,20 +100,37 @@
   .wake { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 
   /* Agent cards */
-  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
+  .cards {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px;
+    /* Each card sizes to its own content. The default (stretch) makes every
+       card in a row as tall as the tallest, which both pads short cards with
+       dead space and, together with the overflow rule below, cropped the long
+       ones. */
+    align-items: start;
+  }
   @media (max-width: 760px) { .cards { grid-template-columns: 1fr; } }
   .card {
     background: var(--panel); border: 1px solid var(--border);
-    border-radius: 9px; overflow: hidden;
+    border-radius: 9px;
+    /* A grid item defaults to min-width:auto, so it refuses to shrink below its
+       longest unbreakable word — a model id like deepseek-ai/deepseek-v4-pro-0813
+       would force the column wider than the window and push the rest out of
+       view on resize. */
+    min-width: 0;
   }
+  /* The header carries the only background that meets the card's rounded
+     corners, so it rounds itself rather than the card clipping everything. */
   .card > .head {
     display: flex; align-items: center; gap: 8px; padding: 11px 13px;
     cursor: pointer; user-select: none; background: var(--panel2);
+    border-radius: 8px 8px 0 0;
   }
   .card > .head:hover { background: #20202a; }
   .card .agent { font-weight: 600; font-size: 14px; }
   .card .chev { margin-left: auto; color: var(--muted); font-size: 12px; }
   .card .body { padding: 12px 14px; border-top: 1px solid var(--border); }
+  /* Long model ids and URLs wrap instead of widening the column. */
+  .card .body, .card .breaks { overflow-wrap: break-word; }
   .card .breaks { padding: 11px 13px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--border); }
   .card .breaks strong { color: var(--warn); display: block; margin-bottom: 3px; font-size: 11px;
     text-transform: uppercase; letter-spacing: .05em; }

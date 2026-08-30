@@ -18,7 +18,7 @@
     "dist:win": "npm run build && electron-builder --win",
     "test:durability": "node test/settings-durability.ts",
     "postbuild": "node scripts/postbuild.mjs",
-    "test": "npm run build && npm run test:durability && npm run test:secrets && npm run test:ui && npm run test:council && npm run test:fresh && npm run test:progress",
+    "test": "npm run build && npm run test:durability && npm run test:secrets && npm run test:ui && npm run test:council && npm run test:fresh && npm run test:progress && npm run test:cards",
     "test:ui": "electron test/smoke-ui.mjs",
     "test:council": "electron test/smoke-council.mjs",
     "test:fresh": "electron test/smoke-freshprofile.mjs",
@@ -27,7 +27,8 @@
     "tool:verify": "npm run build && electron tools/verify-all.mjs",
     "tool:council": "npm run build && electron tools/council-run.mjs",
     "tool:agent": "npm run build && electron tools/run-agent.mjs",
-    "test:secrets": "node test/secret-handling.ts"
+    "test:secrets": "node test/secret-handling.ts",
+    "test:cards": "electron test/smoke-cards.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

@@ -143,6 +143,28 @@
   .sec p { margin: 0 0 6px; }
   .sec ul { margin: 0 0 6px; padding-left: 18px; }
 
+  /* Expand / collapse for anything that can run long.
+     One mechanism used by the headline, both halves of every agent card and
+     the source-gap list, so the control means the same thing everywhere. A
+     collapsed region is clipped to a readable height and fades out at the
+     bottom, which is the only honest way to show that text continues. */
+  .expandable { position: relative; }
+  .expandable.clamped { overflow: hidden; }
+  .expandable.clamped::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 64px;
+    /* Fades to whatever the region sits on, set per context below. */
+    background: linear-gradient(to bottom, transparent, var(--fade-to, var(--panel)));
+    pointer-events: none;
+  }
+  .expand-toggle {
+    display: block; width: 100%; margin-top: 10px; padding: 6px 10px;
+    background: none; border: 1px solid var(--border); border-radius: 6px;
+    color: var(--accent); font: inherit; font-size: 12px; cursor: pointer;
+  }
+  .expand-toggle:hover { border-color: var(--accent); background: #191921; }
+  .card .expand-toggle { margin: 0 13px 12px; width: calc(100% - 26px); }
+  #gaps-section { --fade-to: var(--bg); }
+
   .gaps { font-size: 12px; color: var(--muted); }
   .gaps li { margin-bottom: 3px; }
 

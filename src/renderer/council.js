@@ -110,6 +110,128 @@ function renderBody(container, body) {
   flush();
 }
 
+
+// --- expand / collapse ------------------------------------------------------
+
+/**
+ * How tall each kind of region may grow before it is clamped.
+ *
+ * A council answer runs to several thousand pixels, and an expanded agent card
+ * measured 2277px — enough to bury everything below it. Clamping keeps the
+ * whole answer scannable and leaves the choice to read any one part in full
+ * with the delegate.
+ */
+const CLAMP = { headline: 420, cardBody: 360, cardBreaks: 220, gaps: 180 };
+
+/** Regions currently clamped, so they can be re-measured when the width changes. */
+const clamped = new Set();
+
+/**
+ * Clip a region to `maxPx` and give it a toggle, if it is actually too tall.
+ *
+ * Re-runnable: the previous toggle is removed first, so re-rendering the same
+ * region does not stack controls. A region that already fits gets nothing at
+ * all — an inert "Show more" is worse than no button.
+ */
+function clampRegion(region, maxPx) {
+  // A hidden element reports scrollHeight 0, so measuring one would conclude
+  // that any amount of content fits. Callers reach it again on reveal.
+  if (!region || region.hidden) return;
+
+  const previous = region.nextElementSibling;
+  if (previous && previous.classList.contains("expand-toggle")) previous.remove();
+  region.classList.remove("expandable", "clamped");
+  region.style.maxHeight = "";
+  clamped.delete(region);
+
+  // A small allowance, so a region a few pixels over does not gain a control
+  // that reveals almost nothing.
+  if (region.scrollHeight <= maxPx + 32) return;
+
+  region.classList.add("expandable", "clamped");
+  region.style.maxHeight = `${maxPx}px`;
+  region.dataset.clampAt = String(maxPx);
+  clamped.add(region);
+
+  const toggle = el("button", "expand-toggle", "Show more");
+  toggle.type = "button";
+  toggle.setAttribute("aria-expanded", "false");
+  toggle.addEventListener("click", () => {
+    const nowClamped = region.classList.toggle("clamped");
+    region.style.maxHeight = nowClamped ? `${maxPx}px` : "";
+    toggle.textContent = nowClamped ? "Show more" : "Show less";
+    toggle.setAttribute("aria-expanded", String(!nowClamped));
+    // Once expanded by hand, a resize must not silently re-collapse it.
+    if (nowClamped) clamped.add(region);
+    else clamped.delete(region);
+  });
+  region.after(toggle);
+}
+
+/**
+ * Clamp a region the first time it is actually visible.
+ *
+ * Agent cards are built collapsed, so the body has no measurable height when it
+ * is filled — it only gains one when the card is opened. Measuring once, on
+ * reveal, is what makes the control appear at all; the flag stops a later
+ * reveal from re-collapsing a region the delegate has expanded by hand.
+ */
+function ensureClamped(region, maxPx) {
+  if (!region || region.hidden) return;
+  if (region.dataset.clampMeasured === "1") return;
+  region.dataset.clampMeasured = "1";
+  clampRegion(region, maxPx);
+}
+
+// Re-measure on resize: a region that overflowed at one width may fit at
+// another. Only regions still clamped are reconsidered, so a region the
+// delegate opened stays open.
+let resizeTimer = null;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    for (const region of [...clamped]) {
+      const maxPx = Number(region.dataset.clampAt);
+      if (Number.isFinite(maxPx)) clampRegion(region, maxPx);
+    }
+  }, 150);
+});
+
+/**
+ * Render the coordinator's answer into the headline slot.
+ *
+ * Shared by the live path, the restore path and history replay, which
+ * previously carried three copies of this.
+ */
+function renderHeadline(text, title) {
+  $("headline-section").hidden = false;
+  const host = $("headline");
+  host.innerHTML = "";
+  host.append(el("h3", null, title));
+
+  // The clamp applies to a wrapper, not to #headline itself, so the toggle
+  // sits inside the panel rather than being clipped along with the content.
+  const content = el("div", "headline-content");
+  for (const section of splitSections(text)) {
+    const wrap = el("div", "sec");
+    wrap.append(el("h4", null, section.name));
+    renderBody(wrap, section.body);
+    content.append(wrap);
+  }
+  host.append(content);
+  clampRegion(content, CLAMP.headline);
+}
+
+/** Fill the source-gap list, clamped like everything else that can run long. */
+function renderGaps(gaps) {
+  if (!gaps || gaps.length === 0) return;
+  $("gaps-section").hidden = false;
+  const list = $("gaps");
+  list.innerHTML = "";
+  for (const gap of gaps) list.append(el("li", null, gap));
+  clampRegion(list, CLAMP.gaps);
+}
+
 // --- character panel --------------------------------------------------------
 
 function renderChars() {
@@ -269,6 +391,21 @@ function cardFor(agent) {
     body.hidden = !body.hidden;
     breaks.hidden = !body.hidden;
     chev.textContent = body.hidden ? "▸" : "▾";
+
+    // Whichever half just appeared can be measured for the first time now.
+    ensureClamped(body, CLAMP.cardBody);
+    ensureClamped(breaks, CLAMP.cardBreaks);
+
+    // Each half owns a toggle button that lives outside it, so those follow
+    // the same visibility rather than stranding a control under hidden text.
+    const bodyToggle = body.nextElementSibling;
+    if (bodyToggle && bodyToggle.classList.contains("expand-toggle")) {
+      bodyToggle.hidden = body.hidden;
+    }
+    const breaksToggle = breaks.nextElementSibling;
+    if (breaksToggle && breaksToggle.classList.contains("expand-toggle")) {
+      breaksToggle.hidden = breaks.hidden;
+    }
   });
 
   node.append(head, breaks, body);
@@ -326,6 +463,14 @@ function fillCard(result) {
     ),
   );
   body.append(meta);
+
+  // Both halves of the card get the same treatment: whichever one is on screen
+  // behaves the same way as the headline and the gap list. The content is new,
+  // so any earlier measurement is stale.
+  delete breaks.dataset.clampMeasured;
+  delete body.dataset.clampMeasured;
+  ensureClamped(breaks, CLAMP.cardBreaks);
+  ensureClamped(body, CLAMP.cardBody);
 }
 
 // --- router strip -----------------------------------------------------------
@@ -602,11 +747,7 @@ async function renderAnswer(answer) {
 
   // Non-proceed outcomes wake nobody; show the router's own short reply.
   if (answer.outcome !== "proceed") {
-    $("headline-section").hidden = false;
-    const host = $("headline");
-    host.innerHTML = "";
-    host.append(el("h3", null, "Reply"));
-    renderBody(host, answer.reply ?? "(no reply)");
+    renderHeadline(answer.reply ?? "(no reply)", "Reply");
 
     if (answer.outcome === "help") {
       const guide = await window.mun.council.guide();
@@ -619,25 +760,8 @@ async function renderAnswer(answer) {
     return;
   }
 
-  if (answer.headline) {
-    $("headline-section").hidden = false;
-    const host = $("headline");
-    host.innerHTML = "";
-    host.append(el("h3", null, "Coordinator"));
-    for (const section of splitSections(answer.headline)) {
-      const wrap = el("div", "sec");
-      wrap.append(el("h4", null, section.name));
-      renderBody(wrap, section.body);
-      host.append(wrap);
-    }
-  }
-
-  if ((answer.gaps ?? []).length > 0) {
-    $("gaps-section").hidden = false;
-    const list = $("gaps");
-    list.innerHTML = "";
-    for (const gap of answer.gaps) list.append(el("li", null, gap));
-  }
+  if (answer.headline) renderHeadline(answer.headline, "Coordinator");
+  renderGaps(answer.gaps ?? []);
 
   // Rate limits and cold GPUs will cost the odd agent mid-committee. Offer to
   // recover just those rather than paying for the whole council again.
@@ -747,30 +871,14 @@ function replay(answer) {
 
   if (answer.router) renderRouter(answer.router);
 
-  if (answer.headline) {
-    $("headline-section").hidden = false;
-    const host = $("headline");
-    host.innerHTML = "";
-    host.append(el("h3", null, "Coordinator"));
-    for (const section of splitSections(answer.headline)) {
-      const wrap = el("div", "sec");
-      wrap.append(el("h4", null, section.name));
-      renderBody(wrap, section.body);
-      host.append(wrap);
-    }
-  }
+  if (answer.headline) renderHeadline(answer.headline, "Coordinator");
 
   if (answer.results.length > 0) {
     $("cards-section").hidden = false;
     for (const result of answer.results) fillCard(result);
   }
 
-  if (answer.gaps.length > 0) {
-    $("gaps-section").hidden = false;
-    const list = $("gaps");
-    list.innerHTML = "";
-    for (const gap of answer.gaps) list.append(el("li", null, gap));
-  }
+  renderGaps(answer.gaps ?? []);
 }
 
 (async () => {

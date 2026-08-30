@@ -5,11 +5,13 @@
  */
 
 /**
- * Agent cards must show all of their content and survive a narrow window.
+ * Long content is clamped to a readable height with an expand toggle, and no
+ * region silently crops.
  *
- * Regression test for cards that cropped their text and did not reflow on
+ * Covers two fixes. First, cards that cropped their text and did not reflow on
  * resize: grid items stretch to the tallest card in the row by default and
- * refuse to shrink below their longest unbreakable word.
+ * refuse to shrink below their longest unbreakable word. Second, the manual
+ * expand/collapse now applied to every region that can run long.
  */
 import { appendFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -89,6 +91,8 @@ app.whenReady().then(async () => {
           // overflow:hidden swallows it, so the page stays the right width
           // while text is genuinely unreachable.
           bodyScrollW: body.scrollWidth, bodyClientW: body.clientWidth,
+          bodyHasToggle: !!(body.nextElementSibling &&
+            body.nextElementSibling.classList.contains("expand-toggle")),
           bodyHidden: body.hidden,
           overflow: cs.overflow,
           cardRight: Math.round(card.getBoundingClientRect().right),
@@ -133,8 +137,11 @@ app.whenReady().then(async () => {
     check(`cards are not clipped at ${width}px`,
       m.cards.every((c) => c.cardScroll <= c.cardClient + 1),
       m.cards.map((c) => `${c.agent} ${c.cardScroll}>${c.cardClient}`).join(", "));
-    check(`card bodies are not clipped vertically at ${width}px`,
-      m.cards.every((c) => c.bodyScroll <= c.bodyClient + 1));
+    // Vertical clipping is now intentional: long content is clamped and given
+    // a toggle. What must never happen is clipping with no way to reveal it.
+    check(`no card body is clipped without a way to expand it at ${width}px`,
+      m.cards.every((c) => c.bodyScroll <= c.bodyClient + 1 || c.bodyHasToggle),
+      m.cards.map((c) => `${c.agent} ${c.bodyScroll}>${c.bodyClient} toggle=${c.bodyHasToggle}`).join(", "));
     check(`card text is not cut off horizontally at ${width}px`,
       m.cards.every((c) => c.bodyScrollW <= c.bodyClientW + 1),
       m.cards.map((c) => `${c.agent} ${c.bodyScrollW}>${c.bodyClientW}`).join(", "));
@@ -159,13 +166,98 @@ app.whenReady().then(async () => {
   win.webContents.disableDeviceEmulation();
   await new Promise((r) => setTimeout(r, 200));
 
-  // Collapsing must still work.
+  // --- manual expand / collapse ------------------------------------------
+  // Give the headline and the gap list real content to clamp.
+  await send({ type: "done", answer: {
+    outcome: "proceed", question: "q", reply: null, router: null, results: [],
+    failedAgents: [], characters: ["Doctor Doom"], askedAt: new Date().toISOString(),
+    headline: LONG,
+    gaps: Array.from({ length: 18 }, (_, i) => `Doctor Doom [COMICS] Marvel Comics: source gap number ${i + 1}`),
+  } });
+  await new Promise(r => setTimeout(r, 400));
+
+  const regions = () => win.webContents.executeJavaScript(`
+    (() => {
+      const pick = (sel) => {
+        const n = document.querySelector(sel);
+        if (!n) return null;
+        const t = n.nextElementSibling;
+        return {
+          clamped: n.classList.contains("clamped"),
+          maxHeight: n.style.maxHeight,
+          client: n.clientHeight,
+          scroll: n.scrollHeight,
+          hasToggle: !!(t && t.classList.contains("expand-toggle")),
+          toggleText: t && t.classList.contains("expand-toggle") ? t.textContent : null,
+          toggleHidden: t && t.classList.contains("expand-toggle") ? t.hidden : null,
+          expanded: t && t.classList.contains("expand-toggle") ? t.getAttribute("aria-expanded") : null,
+        };
+      };
+      return {
+        headline: pick("#headline .headline-content"),
+        gaps: pick("#gaps"),
+        longBody: pick("#cards .card .body"),
+        longBreaks: pick("#cards .card .breaks"),
+        shortBreaks: pick("#cards .card:nth-child(2) .breaks"),
+      };
+    })()`);
+
+  let r = await regions();
+
+  check("headline is clamped by default", r.headline?.clamped === true);
+  check("headline clamp actually limits height",
+    r.headline && r.headline.client < r.headline.scroll, `${r.headline?.client} of ${r.headline?.scroll}`);
+  check("headline offers a toggle", r.headline?.hasToggle === true);
+  check("headline toggle starts collapsed",
+    r.headline?.toggleText === "Show more" && r.headline?.expanded === "false");
+
+  check("long agent card body is clamped by default", r.longBody?.clamped === true);
+  check("long card body offers a toggle", r.longBody?.hasToggle === true);
+  check("long 'where this breaks' is clamped", r.longBreaks?.clamped === true);
+  check("source gap list is clamped", r.gaps?.clamped === true);
+  check("gap list offers a toggle", r.gaps?.hasToggle === true);
+
+  // Content that already fits must not get a pointless control.
+  check("short content gets no toggle", r.shortBreaks?.hasToggle === false,
+    `hasToggle=${r.shortBreaks?.hasToggle}`);
+  check("short content is not clamped", r.shortBreaks?.clamped === false);
+
+  // Expanding must reveal the whole thing.
+  await win.webContents.executeJavaScript(`
+    document.querySelector("#headline .headline-content").nextElementSibling.click(); true`);
+  await new Promise(r2 => setTimeout(r2, 250));
+  r = await regions();
+  check("clicking the toggle expands the headline to full height",
+    r.headline?.clamped === false && r.headline.client >= r.headline.scroll - 1,
+    `${r.headline?.client} of ${r.headline?.scroll}`);
+  check("toggle label flips to Show less", r.headline?.toggleText === "Show less");
+  check("toggle reports expanded to assistive tech", r.headline?.expanded === "true");
+
+  // And collapsing again must restore the clamp.
+  await win.webContents.executeJavaScript(`
+    document.querySelector("#headline .headline-content").nextElementSibling.click(); true`);
+  await new Promise(r2 => setTimeout(r2, 250));
+  r = await regions();
+  check("clicking again re-collapses the headline",
+    r.headline?.clamped === true && r.headline.client < r.headline.scroll);
+  check("toggle label flips back", r.headline?.toggleText === "Show more");
+
+  // Collapsing the card must take its toggle with it, not strand it.
   await win.webContents.executeJavaScript(`
     document.querySelectorAll("#cards .card > .head").forEach(h => h.click()); true`);
-  await new Promise(r => setTimeout(r, 250));
+  await new Promise(r2 => setTimeout(r2, 250));
   const collapsed = await win.webContents.executeJavaScript(`
     [...document.querySelectorAll("#cards .card .body")].map(b => b.hidden)`);
   check("cards still collapse after the layout change", collapsed.every(Boolean), JSON.stringify(collapsed));
+
+  r = await regions();
+  check("a hidden card body hides its toggle too", r.longBody?.toggleHidden === true);
+  check("the visible half keeps its toggle", r.longBreaks?.toggleHidden === false);
+
+  const stranded = await win.webContents.executeJavaScript(`
+    [...document.querySelectorAll("#cards .expand-toggle")]
+      .filter(t => !t.hidden && t.previousElementSibling.hidden).length`);
+  check("no toggle is left pointing at hidden content", stranded === 0, String(stranded));
 
   try { rmSync(profile, { recursive: true, force: true }); } catch {}
   log(failures === 0 ? "\nAll card layout checks passed." : `\n${failures} failed.`);

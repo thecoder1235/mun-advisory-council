@@ -1,10 +1,17 @@
 # Dependencies and build output
 node_modules/
 dist/
+build/
+out/
 release/
+*.tsbuildinfo
 
 # Secrets. Never commit a real key; .env.example is the template.
+# The bare name is not enough: .env.local and .env.production are conventional
+# and would otherwise be committed silently.
 .env
+.env.*
+!.env.example
 
 # Local runtime state, written per user at runtime rather than shipped.
 cache/
@@ -17,9 +24,42 @@ settings.backup.json
 *.log
 *.out
 
-# OS and editor noise
-.DS_Store
-Thumbs.db
-*.swp
+# Python. This project ships no Python, but contributors run Python tooling in
+# repos that do not — a stray virtualenv is the usual result.
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+
+# JavaScript tooling caches
+.eslintcache
+coverage/
+.turbo/
+.parcel-cache/
+
+# Editors and IDEs
 .idea/
 .vscode/
+.vs/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# Merge, backup and scratch leftovers
+*.bak
+*.orig
+*.rej
+*.tmp
+
+# OS-generated
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary: this screenshot predates the source-gap fixes and shows
+# cross-publisher noise and duplicated per-section entries that no longer
+# occur. Remove this entry and commit a fresh capture.
+docs/source-gaps.png
